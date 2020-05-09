@@ -294,7 +294,7 @@ class Config:
 
             table = [[remote.name, 'Folder', 'File', 'Size(MB)']]
             data = self.rclone.lsf(
-                remote, self.remote_root, use_ls=True, ls_depth='4')
+                remote, self.remote_root, use_ls=True, ls_depth='9')
             for line in data:
                 #'   758132 Syncthing/KeePass/ARC_20200508124150_KeePass.tar.gz.gpg'
                 line = line.strip().split()

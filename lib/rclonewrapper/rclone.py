@@ -30,6 +30,12 @@ class Rclone:
 
         return ret, output
 
+    def delete(self, remote, filepath):
+        cmd = self.bin + ' delete ' + remote.name + ':' + filepath
+        ret, output = self.run_command(cmd)
+        if ret != 0:
+            logging.error("Could not delete: {}".format(output))
+
     def lsf(self, remote, folder, use_ls=False, ls_depth='1'):
         if use_ls:
             cmd = self.bin + ' ls --max-depth ' + \

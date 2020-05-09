@@ -10,6 +10,7 @@ from lib.timer import timer
 from lib.tarpress import compress, create_tar
 from lib.gpgwrapper import gpg_encrypt
 from lib.md5 import md5
+from lib.cleanup import cleanup
 
 
 def get_args():
@@ -93,22 +94,6 @@ def upload(cfg, remote, folder):
         logging.error("The upload failed.\n{}".format(output))
     else:
         logging.info("Upload for {} complete !!!".format(folder.name))
-
-
-def cleanup(cfg):
-    logging.info("Cleaning up!")
-    for folder in cfg.folders:
-        if os.path.isfile(folder['Tar']):
-            logging.debug("Deleting {}".format(folder['Tar']))
-            os.remove(folder['Tar'])
-        if os.path.isfile(folder['BackupReady']):
-            logging.debug("Deleting {}".format(folder['BackupReady']))
-            os.remove(folder['BackupReady'])
-    # truncate the audit log
-    f = open(cfg.audit_log, 'w')
-    f.truncate()  # pointless as opening in 'w' does it anyway, but whatever!
-    f.close()
-    logging.info("Finished!")
 
 
 @timer
