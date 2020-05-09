@@ -3,6 +3,7 @@ import sys
 import logging
 import json
 import configparser
+from datetime import datetime
 from tabulate import tabulate
 
 from lib.rclonewrapper import rclone_setup, Rclone
@@ -158,6 +159,7 @@ class Config:
                         "Syncthing": [f['Syncthing'] for f in self.folders],
                         "Path": [f['Path'] for f in self.folders],
                         "RPath": [f['RPath'] for f in self.folders],
+                        "DOW": [f['DOW'] for f in self.folders],
                         "Changed": [f['Changed'] for f in self.folders],
                         },
                        headers='keys', tablefmt='psql'))
@@ -193,6 +195,10 @@ class Config:
             elif self.archive_mode:
                 logging.info("Bypassing checks as archive mode is enabled")
                 return True
+            elif str(datetime.today().weekday()) not in folder['DOW']:
+                logging.info("Skipping {} as today is {}({}) and is allowed on {}".format(
+                    folder.name, datetime.today().strftime('%A'), datetime.today().weekday(), folder['DOW']))
+                return False
             # if Syncthing, check if changed < minfiles to skip
             elif folder['Syncthing'].lower() == 'true':
                 if int(folder['Changed']) < int(minfiles):
@@ -242,6 +248,7 @@ class Config:
                         "Syncthing": [f['Syncthing'] for f in folders],
                         "Maxbackups": maxbackups,
                         "Minfiles": minfiles,
+                        "DOW": [f['DOW'] for f in folders],
                         "Changed": [f['Changed'] for f in folders],
                         },
                        headers='keys', tablefmt='psql'))
