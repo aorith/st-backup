@@ -141,7 +141,11 @@ def main():
     #log_fmt='[%(asctime)s][%(module)+15s][%(levelname)+8s] %(message)s'
     log_fmt = '[%(asctime)s][%(levelname)+8s] %(message)s'
     logging.basicConfig(
-        format=log_fmt, datefmt='%Y.%m.%d %H:%M:%S', level=logging.INFO)
+        stream=sys.stdout,
+        format=log_fmt,
+        datefmt='%Y.%m.%d %H:%M:%S',
+        level=logging.INFO)
+
     logging.info('Started')
     cfg = Config(get_args(), os.path.dirname(os.path.realpath(__file__)))
 
