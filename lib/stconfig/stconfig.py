@@ -7,6 +7,7 @@ from datetime import datetime
 from tabulate import tabulate
 
 from lib.rclonewrapper import rclone_setup, Rclone
+from lib.stapi import Stapi
 
 
 class Config:
@@ -14,7 +15,18 @@ class Config:
         self.args = args
         self.mypath = script_path
         self.cfg = configparser.ConfigParser()
-        self.cfg.read(os.path.join(self.mypath, 'config.ini'))
+
+        # load config
+        self.config_file = os.path.join(self.mypath, 'config.ini')
+        if self.args.config is not None:
+            self.config_file = os.path.realpath(self.args.config[0])
+        if not os.path.isfile(self.config_file):
+            logging.error(
+                "Config file not found or permissions error: {}".format(self.config_file))
+            sys.exit(1)
+        self.cfg.read(self.config_file)
+
+        # store system platform
         self.platform = sys.platform
 
         # store archive mode
@@ -35,36 +47,19 @@ class Config:
         # remote root path
         self.remote_root = self.cfg['DEFAULT']['Remote_root']
 
-        # audit log
-        self.audit_log = self.cfg['DEFAULT']['Audit_log']
-        if not os.path.isfile(self.audit_log):
-            logging.error(
-                "ERROR: AUDIT LOG IS SUPPOSED TO POINT TO A LOG FILE")
-            sys.exit(1)
+        # load api handler
+        self.stapi = Stapi(
+            self.cfg['DEFAULT']['ST_Apikey'],
+            self.cfg['DEFAULT']['ST_Host'],
+            int(self.cfg['DEFAULT']['ST_Port']),
+            self.cfg['DEFAULT']['ST_Https'].lower() == 'true'
+        )
 
-        # Device names
+        # map devicesID (first 7 chars) to their name
         self.devices = dict()
-        if self.platform == 'linux':
-            config_path = os.path.join(
-                os.environ['HOME'], '.config', 'syncthing', 'config.xml')
-        elif self.platform == 'win32':
-            config_path = os.path.join(
-                os.environ['LOCALAPPDATA'], 'syncthing', 'config.xml')
-        elif self.platform == 'darwin':
-            config_path = os.path.join(
-                os.environ['HOME'], 'Library', 'Application Support', 'Syncthing', 'config.xml')
-        else:
-            config_path = None
-
-        if config_path is not None:
-            if os.path.isfile(config_path):
-                with open(config_path, 'r') as f:
-                    for line in f:
-                        if 'device id=' in line and 'name=' in line:
-                            did = line.split('id="')[1].split('"')[
-                                0].split('-')[0]
-                            name = line.split('name="')[1].split('"')[0]
-                            self.devices.update({did: name})
+        content = self.stapi.get('/rest/system/config?timeout=5')
+        for d in content['devices']:
+            self.devices.update({d['deviceID'].split('-')[0]: d['name']})
 
         # recipients
         self.recipients = self.cfg['DEFAULT']['Recipients']
@@ -106,17 +101,13 @@ class Config:
 
                 self.cfg[section]['Path'] = fabspath
                 self.cfg[section]['RPath'] = frempath
-                # parse audit log for changed files
-                with open(self.audit_log, 'r') as f:
-                    for line in f:
-                        jdata = json.loads(line)
-                        if 'action' not in jdata['data']:
-                            continue
-                        if jdata['type'] in ['RemoteChangeDetected', 'LocalChangeDetected']:
-                            fid = jdata['data']['folderID']
-                            if self.cfg[section]['Id'] == fid:
-                                self.cfg[section]['Changed'] = str(
-                                    int(self.cfg[section]['Changed']) + 1)
+                # call the api for recent changes
+                content = self.stapi.get('/rest/events/disk?timeout=5')
+                for line in content:
+                    fid = line['data']['folderID']
+                    if self.cfg[section]['Id'] == fid:
+                        self.cfg[section]['Changed'] = str(
+                            int(self.cfg[section]['Changed']) + 1)
                 ####################################################
                 # flag to check if we already have the backup ready (checked in backup() loop)
                 self.cfg[section]['BackupReady'] = 'False'
@@ -128,7 +119,6 @@ class Config:
                     logging.error("Path to folder which doesn't exist: {}".format(
                         self.cfg[section]['Path']))
                     sys.exit(1)
-                # check if folder is enabled
                 # finally append the folder
                 self.folders.append(self.cfg[section])
 
@@ -141,10 +131,12 @@ class Config:
 
     def showconfig(self):
         # default config info
-        print(tabulate({"DEFAULT": ['Workdir', 'Recipients',
-                                    'Audit log', 'Remote root', 'Rclone Path', 'Total Remotes', 'Total Folders'],
-                        "Value": [self.workdir, self.recipients, self.audit_log,
-                                  self.remote_root, self.rclone_path,
+        print(tabulate({"DEFAULT": ['Workdir', 'Recipients', 'ST base endpoint',
+                                    'ST Apikey', 'Remote root', 'Rclone Path',
+                                    'Total Remotes', 'Total Folders'],
+                        "Value": [self.workdir, self.recipients, self.stapi.url,
+                                  self.stapi.apikey, self.remote_root,
+                                  self.rclone_path,
                                   str(len(self.remotes)) + '  (' + str(
                                       len([r for r in self.remotes if r['Enabled'].lower() != 'true']))
                                   + ' disabled)',
@@ -254,33 +246,32 @@ class Config:
                        headers='keys', tablefmt='psql'))
 
     def lastmodified(self):
-        # parse audit log for changed files
+        # call the api for recent changed files
         table = [['Date', 'Time', 'Origin', 'Action', 'Folder',
                   'FolderID', 'Modified By', 'Filename/Path']]
-        with open(self.audit_log, 'r') as f:
-            for line in f:
-                jdata = json.loads(line)
-                if 'action' not in jdata['data']:
-                    continue
-                if jdata['type'] in ['RemoteChangeDetected', 'LocalChangeDetected']:
-                    _date = jdata['time'].split('T')[0]
-                    _time = jdata['time'].split('T')[1].split('.')[0]
-                    origin = jdata['type']
-                    if 'Remote' in origin:
-                        origin = 'Remote'
-                    else:
-                        origin = 'Local'
-                    action = jdata['data']['action']
-                    label = jdata['data']['label']
-                    fid = jdata['data']['folderID']
-                    modifiedBy = jdata['data']['modifiedBy']
-                    if modifiedBy in self.devices.keys():
-                        modifiedBy = self.devices[modifiedBy]
-                    fpath = jdata['data']['path']
-                    table.append([_date, _time, origin, action,
-                                  label, fid, modifiedBy, fpath])
-            # print all the data
-            print(tabulate(table, headers="firstrow", tablefmt="simple"))
+        content = self.stapi.get('/rest/events/disk?timeout=5')
+        for line in content:
+            if 'action' not in line['data']:
+                continue
+            if line['type'] in ['RemoteChangeDetected', 'LocalChangeDetected']:
+                _date = line['time'].split('T')[0]
+                _time = line['time'].split('T')[1].split('.')[0]
+                origin = line['type']
+                if 'Remote' in origin:
+                    origin = 'Remote'
+                else:
+                    origin = 'Local'
+                action = line['data']['action']
+                label = line['data']['label']
+                fid = line['data']['folderID']
+                modifiedBy = line['data']['modifiedBy']
+                if modifiedBy in self.devices.keys():
+                    modifiedBy = self.devices[modifiedBy]
+                fpath = line['data']['path']
+                table.append([_date, _time, origin, action,
+                              label, fid, modifiedBy, fpath])
+        # print all the data
+        print(tabulate(table, headers="firstrow", tablefmt="simple"))
 
     def listbackups(self, ralias=None, falias=None):
         logging.debug("RAlias: {} - FAlias: {}".format(ralias, falias))

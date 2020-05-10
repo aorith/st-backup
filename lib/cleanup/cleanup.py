@@ -12,10 +12,6 @@ def cleanup(cfg):
         if os.path.isfile(folder['BackupReady']):
             logging.debug("Deleting {}".format(folder['BackupReady']))
             os.remove(folder['BackupReady'])
-    # truncate the audit log
-    f = open(cfg.audit_log, 'w')
-    f.truncate()  # pointless as opening in 'w' does it anyway, but whatever!
-    f.close()
 
     # clean the older backup from each folder when maxbackups is reached
     for remote in cfg.remotes:

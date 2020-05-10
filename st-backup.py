@@ -14,7 +14,10 @@ from lib.cleanup import cleanup
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='st-backup')
+    parser = argparse.ArgumentParser(
+        description='An rclone wrapper for backing Syncthing folders to the cloud')
+    parser.add_argument('-c', '--config', nargs=1, type=str, required=False,
+                        default=None, help='Specify the config file to use.')
     subparsers = parser.add_subparsers(dest='mode')
     subparsers.required = True
 
@@ -31,7 +34,7 @@ def get_args():
     subp_listbackups.add_argument('-f', '--folderalias', nargs=1, type=str, required=False, default=None,
                                   help='Specify a folder alias to filter by it')
     subp_lastmodified = subparsers.add_parser(
-        'last', help='Parse the audit_log and list modified files.')
+        'last', help='List recently modified files from ST Api (Only ST folders).')
 
     return parser.parse_args()
 
@@ -154,6 +157,8 @@ def main():
     elif cfg.args.mode == 'backup':
         backup(cfg)
         cleanup(cfg)
+        # restart syncthing to reset recent changed files
+        cfg.stapi.post('/rest/system/restart')
     elif cfg.args.mode == 'list':
         cfg.listbackups(ralias=cfg.args.remotealias,
                         falias=cfg.args.folderalias)
