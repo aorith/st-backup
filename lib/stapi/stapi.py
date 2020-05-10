@@ -1,7 +1,9 @@
 import sys
 import logging
-import requests
 import json
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class Stapi:
