@@ -55,7 +55,8 @@ class Stapi:
                 data=json.dumps(data),
                 params=params,
                 headers=headers,
-                timeout=10.0
+                timeout=10.0,
+                verify=False
             )
 
             if not return_response:
