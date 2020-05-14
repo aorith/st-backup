@@ -129,6 +129,11 @@ class Config:
         # rclone class
         self.rclone = Rclone(self.rclone_bin)
 
+    def upl_summary(self, uploaded):
+        table = [[k, v] for k, v in uploaded.items()]
+        table.insert(0, ['Remote', 'Uploaded Files'])
+        print(tabulate(table, headers='firstrow', tablefmt='psql'))
+
     def showconfig(self):
         # default config info
         print(tabulate({"DEFAULT": ['Workdir', 'Recipients', 'ST base endpoint',

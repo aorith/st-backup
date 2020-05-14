@@ -98,12 +98,16 @@ def upload(cfg, remote, folder):
     else:
         logging.info("Upload for {} complete !!!".format(folder.name))
 
+    return ret
+
 
 @timer
 def backup(cfg):
     logging.info("Starting backup mode...")
     cfg.setup_rclone()
+    uploaded = dict()
     for remote in cfg.remotes:
+        uploaded.update({remote.name: ""})
         logging.info("<<< --- %s --- >>>", remote.name)
         # skip if disabled
         if remote['Enabled'].lower() != 'true':
@@ -137,7 +141,11 @@ def backup(cfg):
                     "There isn't enough space in the remote: {} to upload the backup".format(remote.name))
                 continue
             # all ready to upload
-            upload(cfg, remote, folder)
+            if upload(cfg, remote, folder) == 0:
+                uploaded.update(
+                    {remote.name: uploaded[remote.name] + '\n' + os.path.basename(folder['BackupReady'])})
+
+    return uploaded
 
 
 def main():
@@ -155,7 +163,9 @@ def main():
     if cfg.args.mode == 'showconfig':
         cfg.showconfig()
     elif cfg.args.mode == 'backup':
-        backup(cfg)
+        cfg.lastmodified()
+        uploaded = backup(cfg)
+        cfg.upl_summary(uploaded)
         cleanup(cfg)
         # restart syncthing to reset recent changed files
         cfg.stapi.post('/rest/system/restart')
