@@ -1,7 +1,7 @@
 st-backup
 =========
 
-A python script that I use to upload [Syncthing](https://syncthing.net/) folders to multiple cloud storage solutions such as Google Drive or Dropbox - also some other folders not managed by Syncthing itself.
+A python script that I use to upload [Syncthing](https://syncthing.net/) folders to multiple cloud storage solutions such as Google Drive or Dropbox using [rclone](https://rclone.org/) - also some other folders not managed by Syncthing itself.
 
 # Why
 
