@@ -22,23 +22,23 @@ class Stapi:
             port=self.port
         )
 
-        if  not self.initial_check():
-            logging.error("Could not communicate with syncthing rest api, check config")
+        if not self.initial_check():
+            logging.error(
+                "Could not communicate with syncthing rest api, check config")
             sys.exit(1)
-
 
     def get(self, endpoint, data=None, headers=None, params=None,
             return_response=False, raw_exceptions=False):
         return self._request('GET', endpoint, data, headers, params,
-                            return_response, raw_exceptions)
+                             return_response, raw_exceptions)
 
     def post(self, endpoint, data=None, headers=None, params=None,
-            return_response=False, raw_exceptions=False):
+             return_response=False, raw_exceptions=False):
         return self._request('POST', endpoint, data, headers, params,
-                            return_response, raw_exceptions)
+                             return_response, raw_exceptions)
 
     def _request(self, method, endpoint, data=None, headers=None, params=None,
-                    return_response=False, raw_exceptions=False):
+                 return_response=False, raw_exceptions=False):
 
         endpoint = self.url + endpoint
 
@@ -75,7 +75,7 @@ class Stapi:
 
             if resp.status_code != requests.codes.ok:
                 logging.error('%d %s (%s): %s', resp.status_code, resp.reason,
-                                resp.url, resp.text)
+                              resp.url, resp.text)
                 return resp
 
             if 'json' in resp.headers.get('Content-Type', 'text/plain').lower():
@@ -95,5 +95,6 @@ class Stapi:
             return json_data
 
     def initial_check(self):
-        content = self.get('/rest/system/ping', return_response=False)
+        content = self.get('/rest/system/ping?timeout=3',
+                           return_response=False)
         return 'pong' in content['ping']

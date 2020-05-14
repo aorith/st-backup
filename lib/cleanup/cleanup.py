@@ -16,14 +16,15 @@ def cleanup(cfg):
     # clean the older backup from each folder when maxbackups is reached
     for remote in cfg.remotes:
         logging.info("<< Cleaning {} >>".format(remote.name))
-        output = cfg.rclone.lsf(remote, cfg.remote_root, use_ls=True, ls_depth='9')
+        output = cfg.rclone.lsf(remote, cfg.remote_root,
+                                use_ls=True, ls_depth='9')
 
         # create a dict to store current count of backups for each folder and the oldest file
         backupdict = dict()
         for f in cfg.folders:
             backupdict.update({f.name: 0,
-                f.name + '_max': None,
-                f.name + '_oldest': None})
+                               f.name + '_max': None,
+                               f.name + '_oldest': None})
 
         for line in output:
             line = line.split()[1]
@@ -48,14 +49,17 @@ def cleanup(cfg):
             else:
                 try:
                     curr_timestamp = int(os.path.basename(line).split('_')[0])
-                    stored_timestamp = int(os.path.basename(backupdict[folder.name + '_oldest']).split('_')[0])
+                    stored_timestamp = int(os.path.basename(
+                        backupdict[folder.name + '_oldest']).split('_')[0])
                     if curr_timestamp < stored_timestamp:
                         backupdict[folder.name + '_oldest'] = line
                 except Exception as ex:
-                    logging.error("This should not happen, offending line is:\n{}".format(line))
+                    logging.error(
+                        "This should not happen, offending line is:\n{}".format(line))
 
             # update the dict on each line
-            backupdict.update({folder.name: new_count, folder.name + '_max': maxbackups})
+            backupdict.update(
+                {folder.name: new_count, folder.name + '_max': maxbackups})
 
         # now proceed at cleaning this remote
         for folder in cfg.folders:
@@ -71,11 +75,10 @@ def cleanup(cfg):
                     remote.name, folder.name, curr_count, maxbackups))
                 continue
             # ok, we have to clean this
-            frpath = cfg.remote_root + '/' + backupdict[folder.name + '_oldest']
+            frpath = cfg.remote_root + '/' + \
+                backupdict[folder.name + '_oldest']
             logging.info("{} - {}/{} (current/maxbackups) deleting --> {}".format(
-                    folder.name, curr_count, maxbackups, frpath))
+                folder.name, curr_count, maxbackups, frpath))
             cfg.rclone.delete(remote, frpath)
 
-
     logging.info("Finished!")
-
