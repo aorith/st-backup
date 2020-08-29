@@ -3,6 +3,7 @@ import os
 import sys
 import argparse
 import logging
+import logging.handlers
 from datetime import datetime
 
 from lib.stconfig import Config
@@ -152,7 +153,7 @@ def main():
     logger = logging.getLogger('')
     logger.setLevel(logging.INFO)
     tfh = logging.handlers.TimedRotatingFileHandler(
-        os.path.join(os.environ('HOME'), 'logs', 'st-backup.log'),
+        os.path.join(os.environ['HOME'], 'logs', 'st-backup.log'),
         when='midnight',
         backupCount=24,
     )
