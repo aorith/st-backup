@@ -1,7 +1,6 @@
 import os
 import sys
 import logging
-import json
 import configparser
 from datetime import datetime
 from tabulate import tabulate
@@ -132,11 +131,11 @@ class Config:
     def upl_summary(self, uploaded):
         table = [[k, v] for k, v in uploaded.items()]
         table.insert(0, ['Remote', 'Uploaded Files'])
-        print(tabulate(table, headers='firstrow', tablefmt='psql'))
+        logging.info('\n' + tabulate(table, headers='firstrow', tablefmt='psql'))
 
     def showconfig(self):
         # default config info
-        print(tabulate({"DEFAULT": ['Workdir', 'Recipients', 'ST base endpoint',
+        logging.info('\n' + tabulate({"DEFAULT": ['Workdir', 'Recipients', 'ST base endpoint',
                                     'ST Apikey', 'Remote root', 'Rclone Path',
                                     'Total Remotes', 'Total Folders'],
                         "Value": [self.workdir, self.recipients, self.stapi.url,
@@ -151,7 +150,7 @@ class Config:
                        headers='keys', tablefmt='psql'))
 
         # folders info
-        print(tabulate({"FOLDERS (enabled)": [f.name for f in self.folders],
+        logging.info('\n' + tabulate({"FOLDERS (enabled)": [f.name for f in self.folders],
                         "Id": [f['Id'] for f in self.folders],
                         "Syncthing": [f['Syncthing'] for f in self.folders],
                         "Path": [f['Path'] for f in self.folders],
@@ -169,7 +168,7 @@ class Config:
                 line = line + fn + ' (' + fmax + ')(' + fmin + ')\n'
             folders_inf.append(line)
 
-        print(tabulate({"REMOTES": [r.name for r in self.remotes],
+        logging.info('\n' + tabulate({"REMOTES": [r.name for r in self.remotes],
                         "Folder (Maxbackups)(Minfiles)": folders_inf
                         },
                        headers='keys', tablefmt='fancy_grid'))
@@ -239,7 +238,7 @@ class Config:
         maxbackups = remote['Maxbackups'].split(' ')
         minfiles = remote['Minfiles'].split(' ')
 
-        print(tabulate({remote.name: [f.name for f in folders],
+        logging.info('\n' + tabulate({remote.name: [f.name for f in folders],
                         "Folder Id": [f['Id'] for f in folders],
                         "Enabled": [f['Enabled'] for f in folders],
                         "Syncthing": [f['Syncthing'] for f in folders],
@@ -276,7 +275,7 @@ class Config:
                 table.append([_date, _time, origin, action,
                               label, fid, modifiedBy, fpath])
         # print all the data
-        print(tabulate(table, headers="firstrow", tablefmt="simple"))
+        logging.info('\n' + tabulate(table, headers="firstrow", tablefmt="simple"))
 
     def listbackups(self, ralias=None, falias=None):
         logging.debug("RAlias: {} - FAlias: {}".format(ralias, falias))
@@ -312,7 +311,7 @@ class Config:
                 # append the data
                 table.append([kind, folder, filename, size])
             # print each remote
-            print(tabulate(table, headers="firstrow", tablefmt="psql"))
+            logging.info('\n' + tabulate(table, headers="firstrow", tablefmt="psql"))
 
     def md5_matches(self, remote, folder, md5_str):
         if self.archive_mode:
@@ -324,3 +323,4 @@ class Config:
                 logging.debug("MATCH: '{}' is in '{}'".format(md5_str, val))
                 return True
         return False
+
