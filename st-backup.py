@@ -149,13 +149,18 @@ def backup(cfg):
 
 
 def main():
-    #log_fmt='[%(asctime)s][%(module)+15s][%(levelname)+8s] %(message)s'
-    log_fmt = '[%(asctime)s][%(levelname)+8s] %(message)s'
-    logging.basicConfig(
-        stream=sys.stdout,
-        format=log_fmt,
-        datefmt='%Y.%m.%d %H:%M:%S',
-        level=logging.INFO)
+    logger = logging.getLogger('')
+    logger.setLevel(logging.INFO)
+    tfh = logging.handlers.TimedRotatingFileHandler(
+        os.path.join(os.environ('HOME'), 'logs', 'st-backup.log'),
+        when='midnight',
+        backupCount=24,
+    )
+    formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s',
+                                  datefmt='%Y.%m.%d %H:%M:%S')
+    tfh.setFormatter(formatter)
+    logger.addHandler(tfh)
+
 
     logging.info('Started')
     cfg = Config(get_args(), os.path.dirname(os.path.realpath(__file__)))
