@@ -160,8 +160,11 @@ def main():
     formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s',
                                   datefmt='%Y.%m.%d %H:%M:%S')
     tfh.setFormatter(formatter)
-    logger.addHandler(tfh)
+    sh = logging.StreamHandler(stream=sys.stdout)
+    sh.setFormatter(formatter)
 
+    logger.addHandler(tfh)
+    logger.addHandler(sh)
 
     logging.info('Started')
     cfg = Config(get_args(), os.path.dirname(os.path.realpath(__file__)))
